@@ -1,3 +1,5 @@
+const dataJSON = require('./data.js');
+
 class Conta{
     static db = new Map()
 
