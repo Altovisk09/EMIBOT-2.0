@@ -1,9 +1,9 @@
-const { Client, GatewayIntentBits, resolveColor } = require("discord.js");
+const { Client, GatewayIntentBits} = require("discord.js");
 const Conta = require('./contas.js');
-const { Jokenpo, ApostaCores, VinteUm } = require('./jogos.js')
 const helpCommand = require('./commands/help.js');
 const {commandConta, commandTrabalhar, commandContas, commandTransferir, commandClonar} = require('./commands/ComandosContas.js');
 const { commandJokenpo, commandAposta, commandVinteUm } = require("./commands/ComandosJogos.js");
+const dataJSON = require('./data.js');
 
 require('dotenv').config();
 
@@ -30,17 +30,40 @@ client.on('messageCreate', (message) => {
 
     const args = conteudo.slice(prefix.length).split(' ');
 
-    if (!Conta.db.has(autor.username) && !autor.bot) {
-        const novaConta = new Conta({
-            id: autor.id,
-            nome: autor.globalName,
-            username: autor.username,
-            saldo: 0,
-            ultimoTrabalho: 0
-        })
+    if (!autor.bot) { //Verifica se a mensagem não foi disparada por um bot
+        if(!dataJSON.validarExistencia(autor.username)){
+            const newData = {
+                id: autor.id,
+                nome: autor.globalName,
+                username: autor.username,
+                saldo: 0,
+                ultimoTrabalho: 0
+            }
 
-        Conta.db.set(autor.username, novaConta)
-    };
+            let validation = Conta.db.set(autor.username, new Conta({ id: autor.id, nome: autor.globalName, username: autor.username }))
+           
+            if(validation){
+                console.log(`${autor.globalName} cadastrado`);
+            }else{
+                console.log(`Erro ao cadastrar usuario ${autor.globalName}`);
+            }
+            dataJSON.cadastrarUser(newData); 
+        }else{
+            let validation = dataJSON.validarExistencia(autor.username);
+
+            if(validation){
+                const usuario = dataJSON.encontrarUsuario(autor.username);
+                console.log(usuario)
+                let validation = Conta.db.set(autor.username, new Conta({ id: usuario.id, nome: usuario.nome, username: usuario.username }))
+
+               if(usuario && validation){
+                console.log(`${autor.globalName} cadastrado pelo JSON`);
+               }
+            }else{
+                console.log(`Erro ao cadastrar usuario ${autor.globalName} pelo JSON`);
+            } 
+        }
+        
     const conta = Conta.db.get(autor.username) // Conta do usuário do contexto da mensagem
 
     // Verifique se a mensagem começa com o prefixo e não foi enviada pelo bot
@@ -101,9 +124,10 @@ client.on('messageCreate', (message) => {
     if (comando === 'help') {
         helpCommand.execute(message, prefix);
     }}
-    catch (err) {
-        console.error(err)
-    }
+    
+}catch (err) {
+    console.error(err)
+}
 });
 
 client.login(token);
